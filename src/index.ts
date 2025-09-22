@@ -1,0 +1,10 @@
+export * from './core/types';
+export { UniversalManipulator, type UniversalManipulatorOptions } from './core/UniversalManipulator';
+export { FrameBuilder } from './core/FrameBuilder';
+export { TransformSolver } from './core/TransformSolver';
+export { Snapper } from './core/Snapper';
+export { PivotResolver } from './core/PivotResolver';
+export { HudOverlay } from './core/HudOverlay';
+export { GizmoPrimitive } from './render/GizmoPrimitive';
+export { GizmoPicker } from './interaction/GizmoPicker';
+export { ManipulatorController } from './interaction/ManipulatorController';

@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "dist",
+    "removeComments": false,
+    "sourceMap": true
+  },
+  "exclude": ["tests", "examples", "vite.config.ts"]
+}
