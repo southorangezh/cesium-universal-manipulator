@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const math = await import(resolve(__dirname, '../src/math.js'));
 const solver = await import(resolve(__dirname, '../src/TransformSolver.js'));
+const frameModule = await import(resolve(__dirname, '../src/FrameBuilder.js'));
 
 const results = [];
 
@@ -46,6 +47,28 @@ test('axis drag translation delta', () => {
   const delta = solver.updateAxisTranslation(session, currentRay);
   assert.ok(Math.abs(delta.distance - 1) < 1e-6);
   assert.ok(math.equalsEpsilon(delta.vector, { x: 1, y: 0, z: 0 }, 1e-6));
+});
+
+test('frame builder extracts matrices from entities', () => {
+  let receivedTime = null;
+  const translation = { x: 12, y: 34, z: 56 };
+  const rotation = math.IDENTITY_QUATERNION;
+  const scale = { x: 1, y: 1, z: 1 };
+  const matrix = math.composeTransform(translation, rotation, scale);
+  const Cesium = {
+    JulianDate: { now: () => ({}) },
+    Cartesian3: { fromDegrees: () => ({ x: 1, y: 0, z: 0 }) },
+  };
+  const builder = new frameModule.FrameBuilder({ Cesium });
+  const entity = {
+    computeModelMatrix(time) {
+      receivedTime = time;
+      return matrix;
+    },
+  };
+  const frame = builder.buildFrame({ target: entity });
+  assert.ok(receivedTime, 'computeModelMatrix should be invoked with a JulianDate');
+  assert.ok(math.equalsEpsilon(frame.origin, translation, 1e-9));
 });
 
 let failed = 0;

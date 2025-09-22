@@ -11,7 +11,7 @@ import {
   ZERO_VECTOR,
 } from './math.js';
 
-function extractMatrix(target) {
+function extractMatrix(target, cesiumNamespace) {
   if (!target) {
     return null;
   }
@@ -22,10 +22,23 @@ function extractMatrix(target) {
     return target.modelMatrix;
   }
   if (typeof target.getWorldMatrix === 'function') {
-    return target.getWorldMatrix();
+    const matrix = target.getWorldMatrix();
+    if (matrix) {
+      return matrix;
+    }
   }
-  if (target.entity && target.entity.computeModelMatrix) {
-    return target.entity.computeModelMatrix(Date.now());
+  if (typeof target.computeModelMatrix === 'function') {
+    const JulianDate = cesiumNamespace?.JulianDate;
+    const now = typeof JulianDate?.now === 'function' ? JulianDate.now() : undefined;
+    if (now) {
+      const matrix = target.computeModelMatrix(now);
+      if (matrix) {
+        return matrix;
+      }
+    }
+  }
+  if (target.entity && target.entity !== target) {
+    return extractMatrix(target.entity, cesiumNamespace);
   }
   return null;
 }
@@ -62,11 +75,21 @@ export class FrameBuilder {
   constructor(options = {}) {
     this.cesium = options.Cesium ?? options.cesium;
     this.ellipsoid = options.ellipsoid ?? this.cesium?.Ellipsoid?.WGS84;
+    const cartesianFactory = this.cesium?.Cartesian3;
+    const placeholder =
+      cartesianFactory && typeof cartesianFactory.fromDegrees === 'function'
+        ? cartesianFactory.fromDegrees(0, 0, 0)
+        : null;
+    this._placeholderOrigin = placeholder ?? ZERO_VECTOR;
   }
 
   buildFrame({ target, orientation = 'global', camera, normal, gimbalYaw = 0, gimbalPitch = 0 }) {
-    const matrix = extractMatrix(target);
-    let origin = ZERO_VECTOR;
+    const matrix = extractMatrix(target, this.cesium);
+    let origin = {
+      x: this._placeholderOrigin.x,
+      y: this._placeholderOrigin.y,
+      z: this._placeholderOrigin.z,
+    };
     let rotation = IDENTITY_QUATERNION;
     if (matrix) {
       const decomposed = decomposeTransform(matrix);
