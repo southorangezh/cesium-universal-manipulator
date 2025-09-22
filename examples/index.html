@@ -3,39 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <title>Cesium Universal Manipulator Demo</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cesium/1.133/Cesium.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cesium/1.133/Widgets/widgets.css" />
-    <style>
-      html,
-      body,
-      #cesiumContainer {
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        background: #0b1a2a;
-      }
-      .panel {
-        position: absolute;
-        top: 12px;
-        left: 12px;
-        padding: 12px;
-        background: rgba(0, 0, 0, 0.6);
-        color: #fff;
-        font-family: sans-serif;
-        border-radius: 6px;
-      }
-      .panel label {
-        display: block;
-        margin-bottom: 4px;
-      }
-      .panel select,
-      .panel input {
-        width: 120px;
-        margin-bottom: 6px;
-      }
-    </style>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/cesium@1.133.0/Build/Cesium/Widgets/widgets.css"
+    />
+    <link rel="stylesheet" href="src/styles.css" />
+    <script>
+      window.CESIUM_BASE_URL =
+        'https://cdn.jsdelivr.net/npm/cesium@1.133.0/Build/Cesium/';
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/cesium@1.133.0/Build/Cesium/Cesium.js"></script>
   </head>
   <body>
     <div id="cesiumContainer"></div>
