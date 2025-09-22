@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Cesium Universal Manipulator Demo</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/cesium@1.133.0/Build/Cesium/Widgets/widgets.css"
+    />
+    <link rel="stylesheet" href="src/styles.css" />
+    <script>
+      window.CESIUM_BASE_URL =
+        'https://cdn.jsdelivr.net/npm/cesium@1.133.0/Build/Cesium/';
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/cesium@1.133.0/Build/Cesium/Cesium.js"></script>
+  </head>
+  <body>
+    <div id="cesiumContainer"></div>
+    <div class="panel">
+      <label>
+        Mode
+        <select id="mode">
+          <option value="translate">Translate</option>
+          <option value="rotate">Rotate</option>
+          <option value="scale">Scale</option>
+        </select>
+      </label>
+      <label>
+        Orientation
+        <select id="orientation">
+          <option value="global">Global</option>
+          <option value="local">Local</option>
+          <option value="view">View</option>
+          <option value="enu">ENU</option>
+        </select>
+      </label>
+      <label>
+        Pivot
+        <select id="pivot">
+          <option value="origin">Origin</option>
+          <option value="median">Median</option>
+          <option value="cursor">Cursor</option>
+          <option value="individual">Individual</option>
+        </select>
+      </label>
+      <label>
+        Snap (meters)
+        <input id="snap-translate" type="number" value="1" step="0.1" />
+      </label>
+      <label>
+        Snap (degrees)
+        <input id="snap-rotate" type="number" value="5" step="1" />
+      </label>
+      <label>
+        Snap (scale)
+        <input id="snap-scale" type="number" value="0.1" step="0.1" />
+      </label>
+    </div>
+    <script type="module">
+      import { UniversalManipulator } from '../src/index.js';
+
+      const viewer = new Cesium.Viewer('cesiumContainer', {
+        shouldAnimate: true,
+      });
+
+      viewer.scene.globe.enableLighting = true;
+
+      const redBox = viewer.entities.add({
+        name: 'Red box',
+        position: Cesium.Cartesian3.fromDegrees(-75.59777, 40.03883, 100),
+        box: {
+          dimensions: new Cesium.Cartesian3(30, 30, 30),
+          material: Cesium.Color.RED.withAlpha(0.8),
+        },
+      });
+
+      const greenBox = viewer.entities.add({
+        name: 'Green box',
+        position: Cesium.Cartesian3.fromDegrees(-75.6, 40.04, 100),
+        box: {
+          dimensions: new Cesium.Cartesian3(20, 20, 40),
+          material: Cesium.Color.LIME.withAlpha(0.8),
+        },
+      });
+
+      viewer.zoomTo(viewer.entities);
+
+      const manipulator = new UniversalManipulator({
+        Cesium,
+        viewer,
+        target: [redBox, greenBox],
+        mode: 'translate',
+      });
+
+      const modeSelect = document.getElementById('mode');
+      const orientationSelect = document.getElementById('orientation');
+      const pivotSelect = document.getElementById('pivot');
+      const snapTranslate = document.getElementById('snap-translate');
+      const snapRotate = document.getElementById('snap-rotate');
+      const snapScale = document.getElementById('snap-scale');
+
+      modeSelect.addEventListener('change', () => {
+        manipulator.setMode(modeSelect.value);
+      });
+      orientationSelect.addEventListener('change', () => {
+        manipulator.setOrientation(orientationSelect.value);
+      });
+      pivotSelect.addEventListener('change', () => {
+        manipulator.setPivot(pivotSelect.value);
+      });
+
+      function updateSnap() {
+        manipulator.setSnap({
+          translate: Number(snapTranslate.value),
+          rotate: (Number(snapRotate.value) * Math.PI) / 180,
+          scale: Number(snapScale.value),
+        });
+      }
+
+      snapTranslate.addEventListener('input', updateSnap);
+      snapRotate.addEventListener('input', updateSnap);
+      snapScale.addEventListener('input', updateSnap);
+      updateSnap();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,28 @@
+{
+  "name": "cesium-universal-manipulator",
+  "version": "0.1.0",
+  "description": "Universal translation/rotation/scale manipulator for CesiumJS scenes.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/index.js",
+      "default": "./src/index.js"
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.js",
+    "test": "node tests/run-tests.js"
+  },
+  "keywords": [
+    "cesium",
+    "manipulator",
+    "gizmo",
+    "3d",
+    "transform"
+  ],
+  "author": "",
+  "license": "MIT",
+  "peerDependencies": {
+    "cesium": ">=1.133.0"
+  }
+}
