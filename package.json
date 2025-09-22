@@ -1,0 +1,36 @@
+{
+  "name": "cesium-universal-manipulator",
+  "version": "0.1.0",
+  "description": "Universal translate/rotate/scale manipulator for CesiumJS",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && vite build",
+    "dev": "vite",
+    "preview": "vite preview",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "cesium",
+    "manipulator",
+    "gizmo",
+    "translate",
+    "rotate",
+    "scale"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cesium": "1.133.0"
+  },
+  "devDependencies": {
+    "@types/node": "20.12.7",
+    "typescript": "5.4.5",
+    "vite": "5.2.8",
+    "vitest": "1.5.0"
+  }
+}
