@@ -161,13 +161,14 @@ export class GizmoPrimitive {
       yz: [Cesium.Cartesian3.UNIT_Y, Cesium.Cartesian3.UNIT_Z],
       xz: [Cesium.Cartesian3.UNIT_X, Cesium.Cartesian3.UNIT_Z],
     };
+    const placeholderOrigin = Cesium.Cartesian3.fromDegrees(0, 0, 0);
 
     [['xy', 'z'], ['yz', 'x'], ['xz', 'y']].forEach(([plane, axis]) => {
       const color = colorFromArray(Cesium, this.colors[axis].inactive);
       const [placeholderA, placeholderB] = placeholderAxes[plane];
       const placeholderCorners = planeSquare(
         Cesium,
-        Cesium.Cartesian3.ZERO,
+        placeholderOrigin,
         placeholderA,
         placeholderB,
         1
