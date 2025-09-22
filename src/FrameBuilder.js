@@ -62,6 +62,7 @@ export class FrameBuilder {
   constructor(options = {}) {
     this.cesium = options.Cesium ?? options.cesium;
     this.ellipsoid = options.ellipsoid ?? this.cesium?.Ellipsoid?.WGS84;
+
   }
 
   buildFrame({ target, orientation = 'global', camera, normal, gimbalYaw = 0, gimbalPitch = 0 }) {

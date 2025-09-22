@@ -1,5 +1,6 @@
 import { AXIS_COLORS, HANDLE_TYPES, MODE_HANDLES, DEFAULT_SIZE } from './constants.js';
 
+
 function colorFromArray(Cesium, array) {
   return new Cesium.Color(array[0], array[1], array[2], array[3]);
 }
