@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Cesium Universal Manipulator Demo</title>
+    <style>
+      html, body, #cesiumContainer {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      .toolbar {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        padding: 8px 12px;
+        font: 12px sans-serif;
+        border-radius: 6px;
+      }
+      .toolbar label {
+        display: block;
+        margin-bottom: 6px;
+      }
+      .toolbar select,
+      .toolbar input {
+        margin-left: 4px;
+      }
+    </style>
+    <link
+      href="https://cesium.com/downloads/cesiumjs/releases/1.133/Build/Cesium/Widgets/widgets.css"
+      rel="stylesheet"
+    />
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.133/Build/Cesium/Cesium.js"></script>
+    <script type="module">
+      import Manipulator from '../src/index.js';
+
+      window.addEventListener('DOMContentLoaded', () => {
+        const viewer = new Cesium.Viewer('cesiumContainer', {
+          timeline: false,
+          animation: false
+        });
+
+        const targetEntity = viewer.entities.add({
+          position: Cesium.Cartesian3.fromDegrees(-75.169, 39.952, 100),
+          box: {
+            dimensions: new Cesium.Cartesian3(50, 50, 50),
+            material: Cesium.Color.DODGERBLUE.withAlpha(0.7)
+          }
+        });
+
+        const manipulator = new Manipulator(viewer, {
+          target: targetEntity,
+          orientation: 'global',
+          pivot: 'origin',
+          size: { screenPixelRadius: 80 }
+        });
+
+        const orientationSelect = document.getElementById('orientation');
+        orientationSelect.addEventListener('change', () => {
+          manipulator.setOrientation(orientationSelect.value);
+        });
+
+        const pivotSelect = document.getElementById('pivot');
+        pivotSelect.addEventListener('change', () => {
+          manipulator.setPivot(pivotSelect.value);
+        });
+
+        const snapInput = document.getElementById('snap');
+        snapInput.addEventListener('change', () => {
+          const value = Number(snapInput.value);
+          manipulator.setSnap({ translationStep: value });
+        });
+
+        window.manipulator = manipulator;
+      });
+    </script>
+  </head>
+  <body>
+    <div id="cesiumContainer"></div>
+    <div class="toolbar">
+      <label>
+        Orientation
+        <select id="orientation">
+          <option value="global">Global</option>
+          <option value="local">Local</option>
+          <option value="view">View</option>
+          <option value="enu">ENU</option>
+        </select>
+      </label>
+      <label>
+        Pivot
+        <select id="pivot">
+          <option value="origin">Origin</option>
+          <option value="median">Median</option>
+          <option value="cursor">Cursor</option>
+          <option value="individual">Individual</option>
+        </select>
+      </label>
+      <label>
+        Translation snap (m)
+        <input id="snap" type="number" value="0.1" step="0.1" />
+      </label>
+    </div>
+  </body>
+</html>
