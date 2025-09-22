@@ -151,11 +151,43 @@ export function composeTransform(translation, rotation, scaleVec) {
   ];
 }
 
+function toMatrixElements(matrix) {
+  if (!matrix) {
+    return null;
+  }
+  if (typeof matrix.length === 'number') {
+    return matrix;
+  }
+  if (typeof matrix.elements === 'object' && typeof matrix.elements.length === 'number') {
+    return matrix.elements;
+  }
+  if (typeof matrix.toArray === 'function') {
+    const result = matrix.toArray();
+    if (result && typeof result.length === 'number') {
+      return result;
+    }
+  }
+  return null;
+}
+
 export function decomposeTransform(matrix) {
-  const translation = { x: matrix[12], y: matrix[13], z: matrix[14] };
-  const basisX = { x: matrix[0], y: matrix[4], z: matrix[8] };
-  const basisY = { x: matrix[1], y: matrix[5], z: matrix[9] };
-  const basisZ = { x: matrix[2], y: matrix[6], z: matrix[10] };
+  const elements = toMatrixElements(matrix);
+  if (!elements) {
+    return {
+      translation: { ...ZERO_VECTOR },
+      rotation: { ...IDENTITY_QUATERNION },
+      scale: { x: 1, y: 1, z: 1 },
+    };
+  }
+
+  const translation = {
+    x: elements[12] ?? 0,
+    y: elements[13] ?? 0,
+    z: elements[14] ?? 0,
+  };
+  const basisX = { x: elements[0] ?? 0, y: elements[4] ?? 0, z: elements[8] ?? 0 };
+  const basisY = { x: elements[1] ?? 0, y: elements[5] ?? 0, z: elements[9] ?? 0 };
+  const basisZ = { x: elements[2] ?? 0, y: elements[6] ?? 0, z: elements[10] ?? 0 };
   const scale = {
     x: magnitude(basisX),
     y: magnitude(basisY),
