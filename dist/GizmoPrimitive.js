@@ -92,6 +92,7 @@ export class GizmoPrimitive {
     this._createUniformScale();
     this.mode = 'translate';
     this._applyVisibility();
+    this._seedPlaceholderFrame();
   }
 
   _createEntity(handleId, options) {
@@ -102,6 +103,25 @@ export class GizmoPrimitive {
     });
     this.entities.push(entity);
     return entity;
+  }
+
+  _seedPlaceholderFrame() {
+    const Cesium = this.Cesium;
+    if (!this.viewer || !this.viewer.camera) {
+      return;
+    }
+    const placeholderOrigin = Cesium.Cartesian3.fromDegrees(0, 0, 0);
+    const origin = {
+      x: placeholderOrigin.x,
+      y: placeholderOrigin.y,
+      z: placeholderOrigin.z,
+    };
+    const axes = {
+      x: { x: 1, y: 0, z: 0 },
+      y: { x: 0, y: 1, z: 0 },
+      z: { x: 0, y: 0, z: 1 },
+    };
+    this.update({ origin, axes }, this.viewer.camera);
   }
 
   _createTranslationAxes() {
