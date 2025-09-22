@@ -1,4 +1,3 @@
-
 import { AXIS_COLORS, HANDLE_TYPES, MODE_HANDLES, DEFAULT_SIZE } from './constants.js';
 
 
@@ -117,6 +116,7 @@ export class GizmoPrimitive {
           material: color,
           followSurface: false,
           clampToGround: false,
+          arcType: Cesium.ArcType.NONE,
           classificationType: Cesium.ClassificationType.NONE,
           disableDepthTestDistance: Number.POSITIVE_INFINITY,
         },
@@ -143,6 +143,7 @@ export class GizmoPrimitive {
         polygon: {
           hierarchy: new Cesium.PolygonHierarchy([Cesium.Cartesian3.ZERO, Cesium.Cartesian3.ZERO, Cesium.Cartesian3.ZERO, Cesium.Cartesian3.ZERO]),
           material: color.withAlpha(0.2),
+          perPositionHeight: true,
           classificationType: Cesium.ClassificationType.NONE,
           disableDepthTestDistance: Number.POSITIVE_INFINITY,
         },
@@ -150,6 +151,7 @@ export class GizmoPrimitive {
           positions: [Cesium.Cartesian3.ZERO, Cesium.Cartesian3.ZERO, Cesium.Cartesian3.ZERO, Cesium.Cartesian3.ZERO, Cesium.Cartesian3.ZERO],
           width: 2,
           material: color,
+          arcType: Cesium.ArcType.NONE,
           disableDepthTestDistance: Number.POSITIVE_INFINITY,
         },
       });
@@ -172,6 +174,7 @@ export class GizmoPrimitive {
           positions: [Cesium.Cartesian3.ZERO, Cesium.Cartesian3.ZERO],
           width: 3,
           material: color,
+          arcType: Cesium.ArcType.NONE,
           disableDepthTestDistance: Number.POSITIVE_INFINITY,
         },
         billboard: {
@@ -199,6 +202,7 @@ export class GizmoPrimitive {
           positions: new Array(65).fill(Cesium.Cartesian3.ZERO),
           width: 2,
           material: color,
+          arcType: Cesium.ArcType.NONE,
           disableDepthTestDistance: Number.POSITIVE_INFINITY,
         },
       });
@@ -216,6 +220,7 @@ export class GizmoPrimitive {
         positions: new Array(65).fill(Cesium.Cartesian3.ZERO),
         width: 2,
         material: viewColor,
+        arcType: Cesium.ArcType.NONE,
         disableDepthTestDistance: Number.POSITIVE_INFINITY,
       },
     });
