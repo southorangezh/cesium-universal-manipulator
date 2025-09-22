@@ -1,0 +1,9 @@
+export { UniversalManipulator } from './UniversalManipulator.js';
+export { GizmoPrimitive } from './GizmoPrimitive.js';
+export { GizmoPicker } from './GizmoPicker.js';
+export { ManipulatorController } from './ManipulatorController.js';
+export { FrameBuilder } from './FrameBuilder.js';
+export { PivotResolver } from './PivotResolver.js';
+export { Snapper } from './Snapper.js';
+export * as math from './math.js';
+export * as TransformSolver from './TransformSolver.js';
