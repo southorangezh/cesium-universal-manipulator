@@ -181,6 +181,65 @@ test('manipulator controller undo/redo restores matrices', () => {
   assert.ok(math.equalsEpsilon(math.decomposeTransform(target.matrix).translation, { x: 5, y: 0, z: 0 }, 1e-9));
 });
 
+test('camera controls lock and restore during drag sessions', () => {
+  const Cesium = {
+    ScreenSpaceEventHandler: class {
+      constructor() {}
+      setInputAction() {}
+      destroy() {}
+    },
+    ScreenSpaceEventType: { MOUSE_MOVE: 0, LEFT_DOWN: 1, LEFT_UP: 2, RIGHT_DOWN: 3 },
+  };
+  const controllerState = {
+    enableRotate: true,
+    enableTranslate: true,
+    enableZoom: true,
+    enableTilt: true,
+    enableLook: true,
+  };
+  const viewer = {
+    scene: {
+      canvas: {},
+      requestRender() {},
+      camera: {
+        direction: { x: 0, y: 0, z: -1 },
+        getPickRay() {
+          return null;
+        },
+      },
+      screenSpaceCameraController: controllerState,
+    },
+    clock: { currentTime: { tick: 0 } },
+    container: {},
+  };
+  const controller = new controllerModule.ManipulatorController({
+    Cesium,
+    viewer,
+    gizmo: { setMode() {}, setHover() {}, setActive() {}, update() {}, setShow() {}, destroy() {} },
+    picker: { pick() { return null; }, drillPick() { return null; } },
+    frameBuilder: { buildFrame: () => ({ origin: { x: 0, y: 0, z: 0 }, axes: { x: { x: 1, y: 0, z: 0 }, y: { x: 0, y: 1, z: 0 }, z: { x: 0, y: 0, z: 1 } } }), ellipsoid: {} },
+    snapper: { setConfig() {}, snapTranslation: (v) => v, snapRotation: (v) => v, snapScale: (v) => v },
+    pivotResolver: { setMode() {}, resolve: () => ({ pivot: { x: 0, y: 0, z: 0 }, perTarget: new Map() }) },
+    hud: { setVisible() {}, update() {}, destroy() {} },
+  });
+
+  controller._lockCamera();
+  assert.equal(controllerState.enableRotate, false);
+  assert.equal(controllerState.enableTranslate, false);
+  assert.equal(controllerState.enableZoom, false);
+  assert.equal(controllerState.enableTilt, false);
+  assert.equal(controllerState.enableLook, false);
+
+  controller._unlockCamera();
+  assert.equal(controllerState.enableRotate, true);
+  assert.equal(controllerState.enableTranslate, true);
+  assert.equal(controllerState.enableZoom, true);
+  assert.equal(controllerState.enableTilt, true);
+  assert.equal(controllerState.enableLook, true);
+
+  controller.destroy();
+});
+
 let failed = 0;
 for (const result of results) {
   if (result.status === 'failed') {

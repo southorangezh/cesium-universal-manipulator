@@ -247,6 +247,7 @@ export class ManipulatorController {
     this._typedInput = '';
     this._hudState = {};
     this._history = { undo: [], redo: [] };
+    this._cameraControllerState = null;
     this._registerKeyEvents();
     this._createHandler();
   }
@@ -350,6 +351,45 @@ export class ManipulatorController {
     this.gizmo.setMode(mode);
   }
 
+  _requestRender() {
+    const scene = this.scene ?? this.viewer?.scene;
+    if (scene?.requestRender) {
+      scene.requestRender();
+    }
+  }
+
+  _lockCamera() {
+    const controller = this.viewer?.scene?.screenSpaceCameraController;
+    if (!controller || this._cameraControllerState) {
+      return;
+    }
+    this._cameraControllerState = {
+      enableRotate: controller.enableRotate,
+      enableTranslate: controller.enableTranslate,
+      enableZoom: controller.enableZoom,
+      enableTilt: controller.enableTilt,
+      enableLook: controller.enableLook,
+    };
+    controller.enableRotate = false;
+    controller.enableTranslate = false;
+    controller.enableZoom = false;
+    controller.enableTilt = false;
+    controller.enableLook = false;
+  }
+
+  _unlockCamera() {
+    const controller = this.viewer?.scene?.screenSpaceCameraController;
+    if (!controller || !this._cameraControllerState) {
+      return;
+    }
+    controller.enableRotate = this._cameraControllerState.enableRotate;
+    controller.enableTranslate = this._cameraControllerState.enableTranslate;
+    controller.enableZoom = this._cameraControllerState.enableZoom;
+    controller.enableTilt = this._cameraControllerState.enableTilt;
+    controller.enableLook = this._cameraControllerState.enableLook;
+    this._cameraControllerState = null;
+  }
+
   setOrientation(orientation) {
     if (typeof orientation === 'string') {
       this.orientation = { type: orientation };
@@ -401,6 +441,7 @@ export class ManipulatorController {
       gimbalPitch: gimbal.pitch ?? 0,
     });
     this.gizmo.update(this.frame, this.scene.camera);
+    this._requestRender();
   }
 
   _onPointerMove(position) {
@@ -471,6 +512,8 @@ export class ManipulatorController {
       axesEnu,
       planeBases,
     };
+
+    this._lockCamera();
 
     switch (handle.type) {
       case 'translate-axis':
@@ -597,6 +640,7 @@ export class ManipulatorController {
       this._setHudState(hudState);
     }
     this._updateFrame();
+    this._requestRender();
   }
 
   _applyTranslation(vector) {
@@ -605,6 +649,7 @@ export class ManipulatorController {
       const matrix = composeTransform(translation, entry.transform.rotation, entry.transform.scale);
       setTargetMatrix(entry.target, matrix, this.Cesium);
     });
+    this._requestRender();
   }
 
   _applyRotation(axisVector, angle) {
@@ -623,6 +668,7 @@ export class ManipulatorController {
       const matrix = composeTransform(translation, rotation, entry.transform.scale);
       setTargetMatrix(entry.target, matrix, this.Cesium);
     });
+    this._requestRender();
   }
 
   _applyAxisScale(axis, factor, axisVectorOverride) {
@@ -642,6 +688,7 @@ export class ManipulatorController {
       const matrix = composeTransform(translation, entry.transform.rotation, scale);
       setTargetMatrix(entry.target, matrix, this.Cesium);
     });
+    this._requestRender();
   }
 
   _applyUniformScale(factor) {
@@ -657,6 +704,7 @@ export class ManipulatorController {
       const matrix = composeTransform(translation, entry.transform.rotation, scale);
       setTargetMatrix(entry.target, matrix, this.Cesium);
     });
+    this._requestRender();
   }
 
   _planeNormalForHandle(handle) {
@@ -691,6 +739,7 @@ export class ManipulatorController {
     } else {
       this._recordHistory();
     }
+    this._unlockCamera();
     this.state = 'idle';
     this.gizmo.setActive(null);
     this.hud.setVisible(false);
@@ -700,6 +749,7 @@ export class ManipulatorController {
     this._hudState = {};
     this.currentHandle = null;
     this._updateFrame();
+    this._requestRender();
   }
 
   _restoreStartTransforms() {
@@ -709,6 +759,7 @@ export class ManipulatorController {
         setTargetMatrix(entry.target, entry.matrix.slice(), this.Cesium);
       }
     });
+    this._requestRender();
   }
 
   _recordHistory() {
@@ -812,6 +863,7 @@ export class ManipulatorController {
       }
     });
     this._updateFrame();
+    this._requestRender();
   }
 
   _currentTime() {
@@ -841,6 +893,7 @@ export class ManipulatorController {
   }
 
   destroy() {
+    this._unlockCamera();
     this.handler?.destroy();
     if (typeof document !== 'undefined') {
       document.removeEventListener('keydown', this._keyDownListener);
