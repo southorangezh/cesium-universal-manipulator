@@ -8,6 +8,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const math = await import(resolve(__dirname, '../src/math.js'));
 const solver = await import(resolve(__dirname, '../src/TransformSolver.js'));
 const frameModule = await import(resolve(__dirname, '../src/FrameBuilder.js'));
+const pivotModule = await import(resolve(__dirname, '../src/PivotResolver.js'));
+const parser = await import(resolve(__dirname, '../src/ValueParser.js'));
+const controllerModule = await import(resolve(__dirname, '../src/ManipulatorController.js'));
 
 const results = [];
 
@@ -69,6 +72,113 @@ test('frame builder extracts matrices from entities', () => {
   const frame = builder.buildFrame({ target: entity });
   assert.ok(receivedTime, 'computeModelMatrix should be invoked with a JulianDate');
   assert.ok(math.equalsEpsilon(frame.origin, translation, 1e-9));
+});
+
+test('frame builder normal orientation respects provided vector', () => {
+  const builder = new frameModule.FrameBuilder({});
+  const frame = builder.buildFrame({
+    target: { matrix: math.composeTransform({ x: 0, y: 0, z: 0 }, math.IDENTITY_QUATERNION, { x: 1, y: 1, z: 1 }) },
+    orientation: 'normal',
+    normal: { x: 0, y: 1, z: 0 },
+  });
+  assert.ok(math.equalsEpsilon(frame.axes.z, math.normalize({ x: 0, y: 1, z: 0 }), 1e-12));
+});
+
+test('frame builder gimbal orientation constructs expected axes', () => {
+  const builder = new frameModule.FrameBuilder({});
+  const yaw = Math.PI / 4;
+  const pitch = Math.PI / 6;
+  const frame = builder.buildFrame({
+    target: { matrix: math.composeTransform({ x: 0, y: 0, z: 0 }, math.IDENTITY_QUATERNION, { x: 1, y: 1, z: 1 }) },
+    orientation: 'gimbal',
+    gimbalYaw: yaw,
+    gimbalPitch: pitch,
+  });
+  const expectedYaw = math.normalize({ x: Math.cos(yaw), y: 0, z: Math.sin(yaw) });
+  assert.ok(math.equalsEpsilon(frame.axes.x, expectedYaw, 1e-9));
+  const expectedPitch = math.normalize({ x: 0, y: Math.cos(pitch), z: Math.sin(pitch) });
+  const alignment = Math.abs(math.dot(frame.axes.y, expectedPitch));
+  assert.ok(alignment > 0.8);
+});
+
+test('pivot resolver handles Cesium-style entity positions', () => {
+  const resolver = new pivotModule.PivotResolver();
+  const Cesium = { JulianDate: { now: () => ({}) } };
+  let receivedTime = null;
+  const entity = {
+    position: {
+      getValue(time) {
+        receivedTime = time;
+        return { x: 10, y: 20, z: 30 };
+      },
+    },
+  };
+  const result = resolver.resolve(entity, { Cesium, time: { t: 1 } });
+  assert.ok(receivedTime);
+  assert.deepEqual(result.pivot, { x: 10, y: 20, z: 30 });
+});
+
+test('value parser converts units and angles correctly', () => {
+  const distance = parser.parseDistanceInput('5cm');
+  assert.ok(Math.abs(distance.value - 0.05) < 1e-6);
+  const plane = parser.parsePlaneInput('1m,2');
+  assert.deepEqual(plane.values.map((v) => Number(v.toFixed(6))), [1, 2]);
+  const angle = parser.parseAngleInput('90');
+  assert.ok(Math.abs(angle - Math.PI / 2) < 1e-6);
+  const scale = parser.parseScaleInput('150%');
+  assert.ok(Math.abs(scale - 1.5) < 1e-12);
+});
+
+test('manipulator controller undo/redo restores matrices', () => {
+  const Cesium = {
+    ScreenSpaceEventHandler: class {
+      constructor() {}
+      setInputAction() {}
+      destroy() {}
+    },
+    ScreenSpaceEventType: { MOUSE_MOVE: 0, LEFT_DOWN: 1, LEFT_UP: 2, RIGHT_DOWN: 3 },
+  };
+  const viewer = {
+    scene: {
+      canvas: {},
+      camera: {
+        direction: { x: 0, y: 0, z: -1 },
+        getPickRay() {
+          return null;
+        },
+      },
+    },
+    clock: { currentTime: { tick: 0 } },
+    container: {},
+  };
+  const controller = new controllerModule.ManipulatorController({
+    Cesium,
+    viewer,
+    gizmo: { setMode() {}, setHover() {}, setActive() {}, update() {}, setShow() {}, destroy() {} },
+    picker: { pick() { return null; }, drillPick() { return null; } },
+    frameBuilder: { buildFrame: () => ({ origin: { x: 0, y: 0, z: 0 }, axes: { x: { x: 1, y: 0, z: 0 }, y: { x: 0, y: 1, z: 0 }, z: { x: 0, y: 0, z: 1 } } }) },
+    snapper: { setConfig() {}, snapTranslation: (v) => v, snapRotation: (v) => v, snapScale: (v) => v },
+    pivotResolver: { setMode() {}, resolve: () => ({ pivot: { x: 0, y: 0, z: 0 }, perTarget: new Map() }) },
+    hud: { setVisible() {}, update() {}, destroy() {} },
+  });
+  const target = {
+    matrix: math.composeTransform({ x: 0, y: 0, z: 0 }, math.IDENTITY_QUATERNION, { x: 1, y: 1, z: 1 }),
+  };
+  controller.targets = [target];
+  const startTransform = math.decomposeTransform(target.matrix);
+  controller.dragSession = {
+    startTransforms: [
+      { target, matrix: target.matrix.slice(), transform: startTransform },
+    ],
+  };
+  const movedMatrix = math.composeTransform({ x: 5, y: 0, z: 0 }, math.IDENTITY_QUATERNION, { x: 1, y: 1, z: 1 });
+  target.matrix = movedMatrix.slice();
+  controller._recordHistory();
+  assert.equal(controller._history.undo.length, 1);
+  controller.undo();
+  assert.ok(math.equalsEpsilon(math.decomposeTransform(target.matrix).translation, { x: 0, y: 0, z: 0 }, 1e-9));
+  controller.redo();
+  assert.ok(math.equalsEpsilon(math.decomposeTransform(target.matrix).translation, { x: 5, y: 0, z: 0 }, 1e-9));
 });
 
 let failed = 0;

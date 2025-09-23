@@ -1,17 +1,32 @@
-import { add, scale, ZERO_VECTOR } from './math.js';
+import { add, scale, ZERO_VECTOR, decomposeTransform } from './math.js';
 
-function extractTranslation(target) {
+function extractTranslation(target, context) {
   if (!target) return ZERO_VECTOR;
-  if (target.position) {
-    return target.position;
+  const actual = target.entity && target.entity !== target ? target.entity : target;
+  const resolvedTime = context.time ?? context.defaultTime ?? null;
+  if (actual.position) {
+    if (typeof actual.position.getValue === 'function') {
+      const value = actual.position.getValue(resolvedTime);
+      if (value) {
+        return { x: value.x, y: value.y, z: value.z };
+      }
+    } else if (typeof actual.position.x === 'number') {
+      return { x: actual.position.x, y: actual.position.y, z: actual.position.z };
+    }
   }
-  if (target.matrix) {
-    const m = target.matrix;
-    return { x: m[3], y: m[7], z: m[11] };
+  let matrix =
+    actual.matrix ??
+    actual.modelMatrix ??
+    (typeof actual.getWorldMatrix === 'function' ? actual.getWorldMatrix() : null);
+  if (!matrix && typeof actual.computeModelMatrix === 'function') {
+    const when =
+      resolvedTime ?? (context.Cesium?.JulianDate?.now ? context.Cesium.JulianDate.now() : undefined);
+    if (when) {
+      matrix = actual.computeModelMatrix(when);
+    }
   }
-  if (typeof target.getWorldMatrix === 'function') {
-    const m = target.getWorldMatrix();
-    return { x: m[3], y: m[7], z: m[11] };
+  if (matrix) {
+    return decomposeTransform(matrix).translation;
   }
   return ZERO_VECTOR;
 }
@@ -36,10 +51,20 @@ export class PivotResolver {
     this.cursor = position;
   }
 
-  resolve(targets, modeOverride) {
-    const mode = modeOverride ?? this.mode;
-    const targetArray = Array.isArray(targets) ? targets : [targets];
-    const positions = targetArray.map(extractTranslation);
+  resolve(targets, optionsOrMode) {
+    let mode = this.mode;
+    let options = {};
+    if (typeof optionsOrMode === 'string' || optionsOrMode === undefined) {
+      mode = optionsOrMode ?? this.mode;
+    } else if (optionsOrMode && typeof optionsOrMode === 'object') {
+      options = optionsOrMode;
+      mode = options.mode ?? this.mode;
+    }
+    const resolvedTime =
+      options.time ?? (options.Cesium?.JulianDate?.now ? options.Cesium.JulianDate.now() : undefined);
+    const context = { time: options.time, defaultTime: resolvedTime, Cesium: options.Cesium };
+    const targetArray = Array.isArray(targets) ? targets : targets ? [targets] : [];
+    const positions = targetArray.map((target) => extractTranslation(target, context));
     if (!targetArray.length) {
       return { pivot: ZERO_VECTOR, perTarget: new Map() };
     }

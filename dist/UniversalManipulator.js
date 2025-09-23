@@ -73,6 +73,7 @@ export class UniversalManipulator {
   }
 
   setOrientation(orientation) {
+    this.orientationConfig = orientation;
     this.controller.setOrientation(orientation);
   }
 
@@ -119,5 +120,13 @@ export class UniversalManipulator {
     this.controller.destroy();
     this.gizmo.destroy();
     this.hud.destroy();
+  }
+
+  undo() {
+    this.controller.undo();
+  }
+
+  redo() {
+    this.controller.redo();
   }
 }

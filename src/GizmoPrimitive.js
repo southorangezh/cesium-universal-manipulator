@@ -335,7 +335,7 @@ export class GizmoPrimitive {
     this._updateTranslationAxes(origin, axes, scaleSize);
     this._updateTranslationPlanes(origin, axes, scaleSize * 0.6);
     this._updateScaleHandles(origin, axes, scaleSize * 0.8);
-    this._updateRotationRings(origin, axes, scaleSize);
+    this._updateRotationRings(origin, axes, scaleSize, camera);
     this._updateUniformScale(origin);
   }
 
@@ -392,7 +392,7 @@ export class GizmoPrimitive {
     });
   }
 
-  _updateRotationRings(origin, axes, radius) {
+  _updateRotationRings(origin, axes, radius, camera) {
     const Cesium = this.Cesium;
     const segments = 64;
     const combos = {
@@ -408,10 +408,16 @@ export class GizmoPrimitive {
     });
     const viewHandle = this.handles.get('rotate-view');
     if (viewHandle) {
+      const right = camera?.right
+        ? Cesium.Cartesian3.normalize(camera.right, new Cesium.Cartesian3())
+        : axes.x;
+      const up = camera?.up
+        ? Cesium.Cartesian3.normalize(camera.up, new Cesium.Cartesian3())
+        : axes.y;
       const positions = unitCirclePoints(
         Cesium,
-        axes.x,
-        axes.y,
+        right,
+        up,
         origin,
         radius * 1.05,
         segments

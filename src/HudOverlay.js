@@ -25,6 +25,7 @@ export class HudOverlay {
     });
     this.titleEl = document.createElement('div');
     this.valueEl = document.createElement('div');
+    this.valueEl.style.whiteSpace = 'pre';
     this.root.appendChild(this.titleEl);
     this.root.appendChild(this.valueEl);
     this.container.appendChild(this.root);
@@ -35,23 +36,38 @@ export class HudOverlay {
     this.root.style.display = visible ? 'block' : 'none';
   }
 
-  update({ mode, axis, plane, values }) {
+  update({ mode, axis, plane, values, units, input }) {
     if (!this.enabled) return;
     this.titleEl.textContent = `${mode.toUpperCase()} ${axis ?? plane ?? ''}`.trim();
-    if (!values) {
-      this.valueEl.textContent = '';
-      return;
+    const lines = [];
+    if (values !== undefined && values !== null) {
+      const format = (value) => {
+        let numeric = Number(value);
+        if (!Number.isFinite(numeric)) {
+          numeric = 0;
+        }
+        let unitLabel = units;
+        if (units === 'rad') {
+          numeric = (numeric * 180) / Math.PI;
+          unitLabel = '°';
+        }
+        const suffix = unitLabel ? ` ${unitLabel}` : '';
+        return `${numeric.toFixed(3)}${suffix}`;
+      };
+      if (typeof values === 'number') {
+        lines.push(format(values));
+      } else if (Array.isArray(values)) {
+        lines.push(values.map((v) => format(v)).join(' , '));
+      } else if (typeof values === 'object') {
+        Object.entries(values).forEach(([key, value]) => {
+          lines.push(`${key}: ${format(value)}`);
+        });
+      }
     }
-    if (typeof values === 'number') {
-      this.valueEl.textContent = values.toFixed(3);
-      return;
+    if (input) {
+      lines.push(`Input: ${input}`);
     }
-    if (Array.isArray(values)) {
-      this.valueEl.textContent = values.map((v) => v.toFixed(3)).join(' , ');
-      return;
-    }
-    const parts = Object.entries(values).map(([key, value]) => `${key}: ${Number(value).toFixed(3)}`);
-    this.valueEl.textContent = parts.join('  ');
+    this.valueEl.textContent = lines.join('\n');
   }
 
   destroy() {
