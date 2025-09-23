@@ -70,3 +70,30 @@ body,
   padding: 1px 4px;
   font-family: inherit;
 }
+
+.metrics {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.metrics h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+
+.metrics div {
+  margin-bottom: 4px;
+}
+
+.metrics button {
+  width: 100%;
+  margin-top: 6px;
+  background: #10b981;
+}
+
+.metrics button:active {
+  background: #059669;
+}

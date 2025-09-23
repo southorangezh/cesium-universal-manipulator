@@ -40,6 +40,8 @@ function cartesianToVector(cart) {
   return { x: cart.x, y: cart.y, z: cart.z };
 }
 
+export const __test = { createEnuSpace };
+
 function rayToSimple(ray) {
   return {
     origin: cartesianToVector(ray.origin),
@@ -162,6 +164,23 @@ function setTargetMatrix(target, matrix, Cesium) {
   }
 }
 
+function resolveEntity(target) {
+  if (!target) return null;
+  return target.entity ?? target;
+}
+
+function scaleDeterminantSign(scale) {
+  if (!scale) return 1;
+  const sx = typeof scale.x === 'number' ? scale.x : 1;
+  const sy = typeof scale.y === 'number' ? scale.y : 1;
+  const sz = typeof scale.z === 'number' ? scale.z : 1;
+  const product = sx * sy * sz;
+  if (!Number.isFinite(product) || product === 0) {
+    return 0;
+  }
+  return product > 0 ? 1 : -1;
+}
+
 function createEnuSpace(Cesium, pivot, ellipsoid) {
   const basisIdentity = {
     x: { x: 1, y: 0, z: 0 },
@@ -246,6 +265,7 @@ export class ManipulatorController {
     this._keyState = { ctrlKey: false, shiftKey: false, altKey: false };
     this._typedInput = '';
     this._hudState = {};
+    this._negativeScaleState = new Map();
     this._history = { undo: [], redo: [] };
     this._cameraControllerState = null;
     this._registerKeyEvents();
@@ -415,7 +435,15 @@ export class ManipulatorController {
   }
 
   setTargets(targets) {
-    this.targets = Array.isArray(targets) ? targets : targets ? [targets] : [];
+    const nextTargets = Array.isArray(targets) ? targets : targets ? [targets] : [];
+    const nextSet = new Set(nextTargets);
+    for (const [target, record] of this._negativeScaleState) {
+      if (!nextSet.has(target)) {
+        this._restoreNegativeScaleFix(target, record);
+        this._negativeScaleState.delete(target);
+      }
+    }
+    this.targets = nextTargets;
     this._updateFrame();
   }
 
@@ -485,6 +513,7 @@ export class ManipulatorController {
       const matrix = getTargetMatrix(target, this.Cesium, time);
       const transform = decomposeTransform(matrix);
       const baseMatrix = matrix ?? composeTransform(transform.translation, transform.rotation, transform.scale);
+      this._ensureNegativeScaleRecord(target, transform);
       return { target, matrix: baseMatrix, transform };
     });
     const space = createEnuSpace(this.Cesium, pivot.pivot, this.frameBuilder.ellipsoid);
@@ -687,6 +716,7 @@ export class ManipulatorController {
       };
       const matrix = composeTransform(translation, entry.transform.rotation, scale);
       setTargetMatrix(entry.target, matrix, this.Cesium);
+      this._syncNegativeScaleState(entry.target, scale);
     });
     this._requestRender();
   }
@@ -703,6 +733,7 @@ export class ManipulatorController {
       };
       const matrix = composeTransform(translation, entry.transform.rotation, scale);
       setTargetMatrix(entry.target, matrix, this.Cesium);
+      this._syncNegativeScaleState(entry.target, scale);
     });
     this._requestRender();
   }
@@ -757,6 +788,7 @@ export class ManipulatorController {
     this.dragSession.startTransforms.forEach((entry) => {
       if (entry.matrix) {
         setTargetMatrix(entry.target, entry.matrix.slice(), this.Cesium);
+        this._syncNegativeScaleState(entry.target, entry.transform.scale);
       }
     });
     this._requestRender();
@@ -866,6 +898,108 @@ export class ManipulatorController {
     this._requestRender();
   }
 
+  _ensureNegativeScaleRecord(target, transform) {
+    const entity = resolveEntity(target);
+    const model = entity?.model;
+    let record = this._negativeScaleState.get(target);
+    if (!record) {
+      record = {
+        entity,
+        model,
+        applied: false,
+        originalProperty: model ? model.backFaceCulling : undefined,
+        originalValue: model ? this._readBackFaceValue(model.backFaceCulling) : undefined,
+      };
+      this._negativeScaleState.set(target, record);
+    } else if (record.model !== model) {
+      if (record.applied) {
+        this._restoreNegativeScaleFix(target, record);
+      }
+      record.entity = entity;
+      record.model = model;
+      record.originalProperty = model ? model.backFaceCulling : undefined;
+      record.originalValue = model ? this._readBackFaceValue(model.backFaceCulling) : undefined;
+      record.applied = false;
+    }
+  }
+
+  _readBackFaceValue(property) {
+    if (!property) return undefined;
+    if (typeof property.getValue === 'function') {
+      try {
+        return property.getValue(this._currentTime());
+      } catch (error) {
+        return undefined;
+      }
+    }
+    return property;
+  }
+
+  _syncNegativeScaleState(target, scale) {
+    if (!this._negativeScaleState.has(target)) {
+      this._ensureNegativeScaleRecord(target, { scale });
+    }
+    const record = this._negativeScaleState.get(target);
+    if (!record) return;
+    const parity = scaleDeterminantSign(scale);
+    if (parity < 0) {
+      this._applyNegativeScaleFix(target, record);
+    } else if (record.applied) {
+      this._restoreNegativeScaleFix(target, record);
+    }
+  }
+
+  _applyNegativeScaleFix(target, record) {
+    if (!record || record.applied || !record.model) {
+      return;
+    }
+    const ConstantProperty = this.Cesium?.ConstantProperty;
+    const current = record.model.backFaceCulling;
+    if (current && typeof current.setValue === 'function') {
+      if (ConstantProperty) {
+        record.model.backFaceCulling = new ConstantProperty(false);
+      } else {
+        record.model.backFaceCulling = false;
+      }
+    } else if (ConstantProperty) {
+      record.model.backFaceCulling = new ConstantProperty(false);
+    } else {
+      record.model.backFaceCulling = false;
+    }
+    record.applied = true;
+  }
+
+  _restoreNegativeScaleFix(target, record) {
+    if (!record || !record.applied || !record.model) {
+      return;
+    }
+    const ConstantProperty = this.Cesium?.ConstantProperty;
+    const originalProperty = record.originalProperty;
+    const originalValue = record.originalValue;
+    if (originalProperty && typeof originalProperty.setValue === 'function') {
+      originalProperty.setValue(originalValue ?? true);
+      record.model.backFaceCulling = originalProperty;
+    } else if (originalProperty !== undefined) {
+      record.model.backFaceCulling = originalProperty;
+    } else if (originalValue != null) {
+      if (ConstantProperty) {
+        record.model.backFaceCulling = new ConstantProperty(originalValue);
+      } else {
+        record.model.backFaceCulling = originalValue;
+      }
+    } else {
+      record.model.backFaceCulling = undefined;
+    }
+    record.applied = false;
+  }
+
+  _resetNegativeScaleState() {
+    for (const [target, record] of this._negativeScaleState) {
+      this._restoreNegativeScaleFix(target, record);
+      this._negativeScaleState.delete(target);
+    }
+  }
+
   _currentTime() {
     if (this.clock?.currentTime) {
       return this.clock.currentTime;
@@ -893,6 +1027,7 @@ export class ManipulatorController {
   }
 
   destroy() {
+    this._resetNegativeScaleState();
     this._unlockCamera();
     this.handler?.destroy();
     if (typeof document !== 'undefined') {

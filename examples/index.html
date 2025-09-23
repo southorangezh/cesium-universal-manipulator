@@ -84,6 +84,13 @@
           apply. Press <kbd>Esc</kbd> or right-click to cancel.
         </p>
       </div>
+      <div class="metrics">
+        <h3>Performance</h3>
+        <div id="metrics-fps">FPS: --</div>
+        <div id="metrics-frame">Frame: -- ms</div>
+        <div id="metrics-memory">Memory Δ: --</div>
+        <button id="metrics-reset" type="button">Reset stats</button>
+      </div>
     </div>
     <script type="module">
       import { UniversalManipulator } from '../src/index.js';
@@ -138,6 +145,10 @@
       const gimbalPitch = document.getElementById('gimbal-pitch');
       const undoButton = document.getElementById('undo');
       const redoButton = document.getElementById('redo');
+      const metricsFps = document.getElementById('metrics-fps');
+      const metricsFrame = document.getElementById('metrics-frame');
+      const metricsMemory = document.getElementById('metrics-memory');
+      const metricsReset = document.getElementById('metrics-reset');
 
       modeSelect.addEventListener('change', () => {
         manipulator.setMode(modeSelect.value);
@@ -183,6 +194,7 @@
 
       undoButton.addEventListener('click', () => manipulator.undo());
       redoButton.addEventListener('click', () => manipulator.redo());
+      metricsReset.addEventListener('click', () => manipulator.resetPerformanceMetrics());
 
       function updateSnap() {
         manipulator.setSnap({
@@ -197,6 +209,26 @@
       snapScale.addEventListener('input', updateSnap);
       updateSnap();
       updateOrientation();
+
+      function updateMetrics() {
+        const metrics = manipulator.getPerformanceMetrics();
+        if (metrics.frameSamples > 0) {
+          metricsFps.textContent = `FPS: ${metrics.fps.toFixed(1)}`;
+          metricsFrame.textContent = `Frame: ${metrics.averageFrameTime.toFixed(2)} ms`;
+        } else {
+          metricsFps.textContent = 'FPS: --';
+          metricsFrame.textContent = 'Frame: -- ms';
+        }
+        if (metrics.memorySamples > 0 && metrics.averageMemory != null) {
+          const deltaMb = metrics.memoryDelta / (1024 * 1024);
+          metricsMemory.textContent = `Memory Δ: ${deltaMb.toFixed(2)} MB`;
+        } else {
+          metricsMemory.textContent = 'Memory Δ: n/a';
+        }
+      }
+
+      setInterval(updateMetrics, 1000);
+      updateMetrics();
     </script>
   </body>
 </html>

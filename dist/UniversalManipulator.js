@@ -5,6 +5,7 @@ import { FrameBuilder } from './FrameBuilder.js';
 import { Snapper } from './Snapper.js';
 import { PivotResolver } from './PivotResolver.js';
 import { HudOverlay } from './HudOverlay.js';
+import { PerformanceMonitor } from './PerformanceMonitor.js';
 
 export class UniversalManipulator {
   constructor(options = {}) {
@@ -37,6 +38,8 @@ export class UniversalManipulator {
     this.snapper = new Snapper(snap);
     this.pivotResolver = new PivotResolver();
     this.hud = new HudOverlay({ container: hudContainer ?? (typeof viewer.container !== 'string' ? viewer.container : null) });
+    this.performanceMonitor = new PerformanceMonitor({ viewer });
+    this.performanceMonitor.start();
 
     this.controller = new ManipulatorController({
       Cesium,
@@ -117,6 +120,7 @@ export class UniversalManipulator {
   }
 
   destroy() {
+    this.performanceMonitor?.stop();
     this.controller.destroy();
     this.gizmo.destroy();
     this.hud.destroy();
@@ -128,5 +132,22 @@ export class UniversalManipulator {
 
   redo() {
     this.controller.redo();
+  }
+
+  getPerformanceMetrics() {
+    return this.performanceMonitor?.getMetrics() ?? {
+      frameSamples: 0,
+      averageFrameTime: 0,
+      maxFrameTime: 0,
+      minFrameTime: 0,
+      fps: 0,
+      memorySamples: 0,
+      averageMemory: null,
+      memoryDelta: 0,
+    };
+  }
+
+  resetPerformanceMetrics() {
+    this.performanceMonitor?.reset();
   }
 }

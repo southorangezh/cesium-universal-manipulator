@@ -5,5 +5,6 @@ export { ManipulatorController } from './ManipulatorController.js';
 export { FrameBuilder } from './FrameBuilder.js';
 export { PivotResolver } from './PivotResolver.js';
 export { Snapper } from './Snapper.js';
+export { PerformanceMonitor } from './PerformanceMonitor.js';
 export * as math from './math.js';
 export * as TransformSolver from './TransformSolver.js';
