@@ -32,8 +32,26 @@
           <option value="local">Local</option>
           <option value="view">View</option>
           <option value="enu">ENU</option>
+          <option value="normal">Normal</option>
+          <option value="gimbal">Gimbal</option>
         </select>
       </label>
+      <div class="row" id="orientation-normal" hidden>
+        <span>Normal (XYZ)</span>
+        <input id="normal-x" type="number" value="0" step="0.1" />
+        <input id="normal-y" type="number" value="0" step="0.1" />
+        <input id="normal-z" type="number" value="1" step="0.1" />
+      </div>
+      <div class="row" id="orientation-gimbal" hidden>
+        <label>
+          Gimbal yaw (°)
+          <input id="gimbal-yaw" type="number" value="0" step="5" />
+        </label>
+        <label>
+          Gimbal pitch (°)
+          <input id="gimbal-pitch" type="number" value="0" step="5" />
+        </label>
+      </div>
       <label>
         Pivot
         <select id="pivot">
@@ -55,6 +73,17 @@
         Snap (scale)
         <input id="snap-scale" type="number" value="0.1" step="0.1" />
       </label>
+      <div class="row buttons">
+        <button id="undo">Undo</button>
+        <button id="redo">Redo</button>
+      </div>
+      <div class="help">
+        <p>
+          While dragging, hold <kbd>Ctrl</kbd> for snapping, <kbd>Shift</kbd> for fine adjustments, or type
+          values such as <code>5m</code>, <code>0.5</code>, or <code>90°</code> then press <kbd>Enter</kbd> to
+          apply. Press <kbd>Esc</kbd> or right-click to cancel.
+        </p>
+      </div>
     </div>
     <script type="module">
       import { UniversalManipulator } from '../src/index.js';
@@ -98,16 +127,62 @@
       const snapTranslate = document.getElementById('snap-translate');
       const snapRotate = document.getElementById('snap-rotate');
       const snapScale = document.getElementById('snap-scale');
+      const normalRow = document.getElementById('orientation-normal');
+      const normalInputs = {
+        x: document.getElementById('normal-x'),
+        y: document.getElementById('normal-y'),
+        z: document.getElementById('normal-z'),
+      };
+      const gimbalRow = document.getElementById('orientation-gimbal');
+      const gimbalYaw = document.getElementById('gimbal-yaw');
+      const gimbalPitch = document.getElementById('gimbal-pitch');
+      const undoButton = document.getElementById('undo');
+      const redoButton = document.getElementById('redo');
 
       modeSelect.addEventListener('change', () => {
         manipulator.setMode(modeSelect.value);
       });
-      orientationSelect.addEventListener('change', () => {
-        manipulator.setOrientation(orientationSelect.value);
-      });
+      orientationSelect.addEventListener('change', updateOrientation);
       pivotSelect.addEventListener('change', () => {
         manipulator.setPivot(pivotSelect.value);
       });
+
+      function updateOrientation() {
+        const type = orientationSelect.value;
+        normalRow.hidden = type !== 'normal';
+        gimbalRow.hidden = type !== 'gimbal';
+        if (type === 'normal') {
+          manipulator.setOrientation({
+            type: 'normal',
+            normal: {
+              x: Number(normalInputs.x.value),
+              y: Number(normalInputs.y.value),
+              z: Number(normalInputs.z.value),
+            },
+          });
+          return;
+        }
+        if (type === 'gimbal') {
+          manipulator.setOrientation({
+            type: 'gimbal',
+            gimbal: {
+              yaw: (Number(gimbalYaw.value) * Math.PI) / 180,
+              pitch: (Number(gimbalPitch.value) * Math.PI) / 180,
+            },
+          });
+          return;
+        }
+        manipulator.setOrientation(type);
+      }
+
+      gimbalYaw.addEventListener('input', updateOrientation);
+      gimbalPitch.addEventListener('input', updateOrientation);
+      Object.values(normalInputs).forEach((input) => {
+        input.addEventListener('input', updateOrientation);
+      });
+
+      undoButton.addEventListener('click', () => manipulator.undo());
+      redoButton.addEventListener('click', () => manipulator.redo());
 
       function updateSnap() {
         manipulator.setSnap({
@@ -121,6 +196,7 @@
       snapRotate.addEventListener('input', updateSnap);
       snapScale.addEventListener('input', updateSnap);
       updateSnap();
+      updateOrientation();
     </script>
   </body>
 </html>

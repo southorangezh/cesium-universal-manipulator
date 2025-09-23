@@ -71,6 +71,35 @@ Targets can be:
 - `setSnap(stepConfig)` — Update snapping step sizes (translate in meters, rotate in radians, scale factor).
 - `setSize(screenRadius, minScale, maxScale)` — Control screen-space gizmo size behaviour.
 - `destroy()` — Dispose the gizmo, controller, and HUD.
+- `undo()` / `redo()` — Step through the command history recorded after each drag submission.
+
+#### Orientation helpers
+
+`setOrientation` accepts either a string or a configuration object:
+
+```js
+manipulator.setOrientation({
+  type: 'normal',
+  normal: { x: 0, y: 0, z: 1 }, // custom frame normal
+});
+
+manipulator.setOrientation({
+  type: 'gimbal',
+  gimbal: {
+    yaw: Cesium.Math.toRadians(45),
+    pitch: Cesium.Math.toRadians(20),
+  },
+});
+```
+
+Both helpers update the gizmo immediately and remain active while switching between targets and modes.
+
+### Interaction features
+
+- **Snapping & fine control** — Hold <kbd>Ctrl</kbd> to quantise translation/rotation/scale to the configured step. Hold <kbd>Shift</kbd> to reduce sensitivity for micro adjustments.
+- **Numeric entry** — While dragging, type values like `2m`, `15cm`, `90`, or `0.5` and press <kbd>Enter</kbd> to commit the parsed distance/angle/scale. Units support metres/centimetres/kilometres, percentages, and degrees (`°`).
+- **Cancellation** — Press <kbd>Esc</kbd> or right-click mid-drag to abandon the active operation and revert to the pre-drag transform.
+- **Undo/redo** — Every drag submission records before/after matrices; call `undo()` / `redo()` (or use the demo buttons) to traverse the history.
 
 ### Properties
 
