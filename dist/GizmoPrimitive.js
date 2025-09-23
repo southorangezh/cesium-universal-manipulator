@@ -61,6 +61,22 @@ function planeSquare(Cesium, origin, axisA, axisB, size) {
   );
 }
 
+function orientationFromAxis(Cesium, axisVector) {
+  const forward = Cesium.Cartesian3.normalize(axisVector, new Cesium.Cartesian3());
+  const absZ = Math.abs(forward.z);
+  const reference = absZ > 0.9 ? Cesium.Cartesian3.UNIT_X : Cesium.Cartesian3.UNIT_Z;
+  const right = Cesium.Cartesian3.normalize(
+    Cesium.Cartesian3.cross(reference, forward, new Cesium.Cartesian3()),
+    new Cesium.Cartesian3()
+  );
+  const up = Cesium.Cartesian3.normalize(
+    Cesium.Cartesian3.cross(forward, right, new Cesium.Cartesian3()),
+    new Cesium.Cartesian3()
+  );
+  const rotation = Cesium.Matrix3.fromColumns(right, up, forward, new Cesium.Matrix3());
+  return Cesium.Quaternion.fromRotationMatrix(rotation);
+}
+
 export class GizmoPrimitive {
   constructor({ Cesium, viewer, colors = {}, size = {} }) {
     if (!Cesium) {
@@ -139,9 +155,16 @@ export class GizmoPrimitive {
           classificationType: Cesium.ClassificationType.NONE,
           disableDepthTestDistance: Number.POSITIVE_INFINITY,
         },
-        point: {
-          pixelSize: 16,
-          color,
+        position: Cesium.Cartesian3.ZERO,
+        orientation: Cesium.Quaternion.IDENTITY,
+        cylinder: {
+          length: 1,
+          topRadius: 0,
+          bottomRadius: 0.1,
+          material: color,
+          slices: 24,
+          numberOfVerticalLines: 0,
+          outline: false,
           disableDepthTestDistance: Number.POSITIVE_INFINITY,
         },
       });
@@ -341,6 +364,9 @@ export class GizmoPrimitive {
 
   _updateTranslationAxes(origin, axes, length) {
     const Cesium = this.Cesium;
+    const CesiumMath = Cesium.Math;
+    const coneLengthRatio = this.size.axisConeLength ?? 0.25;
+    const coneRadiusRatio = this.size.axisConeRadius ?? 0.06;
     ['x', 'y', 'z'].forEach((axis) => {
       const handle = this.handles.get(`translate-${axis}`);
       if (!handle) return;
@@ -352,7 +378,32 @@ export class GizmoPrimitive {
         new Cesium.Cartesian3()
       );
       entity.polyline.positions = [origin, end];
-      entity.point.position = end;
+      if (entity.cylinder) {
+        let coneLength = length * coneLengthRatio;
+        const minLength = length * 0.1;
+        const maxLength = length * 0.6;
+        coneLength = CesiumMath.clamp(coneLength, minLength, maxLength);
+        if (coneLength <= 0) {
+          coneLength = length || 1;
+        }
+        let coneRadius = length * coneRadiusRatio;
+        const minRadius = coneLength * 0.2;
+        coneRadius = Math.max(coneRadius, minRadius);
+        const center = Cesium.Cartesian3.add(
+          origin,
+          Cesium.Cartesian3.multiplyByScalar(
+            axisVector,
+            length - coneLength * 0.5,
+            new Cesium.Cartesian3()
+          ),
+          new Cesium.Cartesian3()
+        );
+        entity.position = center;
+        entity.orientation = orientationFromAxis(Cesium, axisVector);
+        entity.cylinder.length = coneLength;
+        entity.cylinder.topRadius = 0;
+        entity.cylinder.bottomRadius = coneRadius;
+      }
     });
   }
 
@@ -460,6 +511,9 @@ export class GizmoPrimitive {
       }
       if (entity.point) {
         entity.point.color = color;
+      }
+      if (entity.cylinder) {
+        entity.cylinder.material = color;
       }
       if (entity.billboard) {
         entity.billboard.color = color;

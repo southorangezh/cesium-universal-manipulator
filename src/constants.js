@@ -36,6 +36,8 @@ export const DEFAULT_SIZE = {
   screenRadius: 110,
   minScale: 0.2,
   maxScale: 2.5,
+  axisConeLength: 0.25,
+  axisConeRadius: 0.06,
 };
 
 export const MODE_TO_HANDLE_TYPE = {
